@@ -1,0 +1,59 @@
+# Bitácora del proyecto (ya incluido)
+bitacora.md
+
+# Bytecode Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+.env
+.env.local
+
+# Distribución y build
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Testing y coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+
+# Herramientas de desarrollo
+.mypy_cache/
+.flake8
+.black
+.cursor/
+.cursorrules
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Archivos de IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Archivos temporales
+*.tmp
+*.temp
+*.log
+
+# Configuración local
+config/local.json
+.env.*.local
+
+# Archivos de coverage
+.coverage.*
+coverage.xml

@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Entry Schema",
+  "description": "Esquema para validar entradas del sistema de memoria",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Identificador único de la entrada",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "examples": ["550e8400-e29b-41d4-a716-446655440000"]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Fecha y hora de creación de la entrada",
+      "examples": ["2025-08-08T11:55:55"]
+    },
+    "type": {
+      "type": "string",
+      "enum": ["decision", "change", "context", "bug", "feature", "note"],
+      "description": "Tipo de entrada"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Título descriptivo de la entrada"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Etiquetas para categorizar la entrada"
+    },
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Contenido principal de la entrada"
+    },
+    "files_affected": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Archivos relacionados con esta entrada"
+    },
+    "llm_context": {
+      "type": "string",
+      "description": "Información específica para agentes LLM"
+    },
+    "related_entries": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      },
+      "description": "Lista de IDs de entradas relacionadas para contexto y trazabilidad"
+    },
+    "git_info": {
+      "type": "object",
+      "properties": {
+        "current_commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{7,40}$",
+          "description": "Hash del commit actual"
+        },
+        "commit_message": {
+          "type": "string",
+          "description": "Mensaje del commit actual"
+        },
+        "branch": {
+          "type": "string",
+          "description": "Rama actual del repositorio"
+        },
+        "is_clean": {
+          "type": "boolean",
+          "description": "Indica si el repositorio está limpio (sin cambios pendientes)"
+        }
+      },
+      "required": ["current_commit", "branch", "is_clean"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["id", "timestamp", "type", "title", "content"],
+  "additionalProperties": false
+}

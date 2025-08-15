@@ -1,0 +1,59 @@
+{
+  "project": {
+    "name": "memoria-cursor",
+    "description": "Sistema de memoria para agentes LLM",
+    "version": "1.0.0"
+  },
+  "system": {
+    "auto_git": true,
+    "default_entry_type": "note",
+    "max_content_length": 10000,
+    "backup_enabled": true,
+    "backup_interval": "daily"
+  },
+  "export": {
+    "default_format": "markdown",
+    "include_git_info": true,
+    "group_by": "type",
+    "max_entries_per_export": 100
+  },
+  "types": {
+    "decision": {
+      "description": "Decisiones de arquitectura y diseño",
+      "color": "blue",
+      "icon": "🎯"
+    },
+    "change": {
+      "description": "Cambios importantes en el código",
+      "color": "green",
+      "icon": "📝"
+    },
+    "context": {
+      "description": "Información de contexto del proyecto",
+      "color": "yellow",
+      "icon": "📋"
+    },
+    "bug": {
+      "description": "Problemas y bugs encontrados",
+      "color": "red",
+      "icon": "🐛"
+    },
+    "feature": {
+      "description": "Nuevas funcionalidades implementadas",
+      "color": "purple",
+      "icon": "✨"
+    },
+    "note": {
+      "description": "Notas generales y observaciones",
+      "color": "gray",
+      "icon": "📌"
+    }
+  },
+  "git": {
+    "enabled": true,
+    "capture_commit_message": true,
+    "capture_branch": true,
+    "capture_status": true,
+    "warn_on_dirty": true
+  }
+}

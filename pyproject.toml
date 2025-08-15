@@ -1,0 +1,121 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "memoria-cursor"
+version = "1.0.0"
+description = "Sistema de memoria para agentes LLM"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Juan Gabriel Juara", email = "jgjuara@gmail.com"}
+]
+maintainers = [
+    {name = "Juan Gabriel Juara", email = "jgjuara@gmail.com"}
+]
+keywords = ["memory", "llm", "agents", "development", "documentation", "git", "project-management"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Text Processing :: Markup",
+]
+requires-python = ">=3.7"
+dependencies = [
+    "click>=8.0.0",
+    "jsonschema>=3.0.0",
+    "rich>=10.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0.0",
+    "pytest-cov>=2.0.0",
+    "black>=21.0.0",
+    "flake8>=3.8.0",
+    "mypy>=0.800",
+]
+docs = [
+    "sphinx>=4.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+]
+
+[project.scripts]
+memoria = "memoria_cursor.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/jgjuara/memoria-cursor"
+Documentation = "https://github.com/jgjuara/memoria-cursor#readme"
+Repository = "https://github.com/jgjuara/memoria-cursor"
+"Bug Tracker" = "https://github.com/jgjuara/memoria-cursor/issues"
+
+[tool.setuptools]
+packages = ["memoria_cursor"]
+
+[tool.setuptools.package-data]
+memoria_cursor = ["templates/*", "config/*.json"]
+
+# Versión estática en lugar de dinámica
+# [tool.setuptools_scm]
+# write_to = "memoria_cursor/_version.py"
+
+[tool.black]
+line-length = 88
+target-version = ['py37']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.mypy]
+python_version = "3.7"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.coverage.run]
+source = ["memoria_cursor"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/env/*",
+]
