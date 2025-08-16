@@ -4,7 +4,8 @@ Sistema principal de memoria que orquesta todas las funcionalidades.
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
+from importlib import resources
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Union
 from jsonschema import validate, ValidationError
@@ -52,6 +53,41 @@ class MemorySystem:
         # Integración con Git
         self.git_integration = GitIntegration(self.project_root) if auto_git else None
     
+    def _load_schema(self) -> Optional[Dict[str, Any]]:
+        """Cargar el esquema JSON para validar entradas.
+
+        Prioriza el archivo del proyecto en `config/schema.json`. Si no existe,
+        carga el esquema embebido en el paquete `memoria_cursor.config.schema.json`.
+        """
+        # Intentar cargar desde el proyecto
+        try:
+            if self.schema_file.exists():
+                with open(self.schema_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception:
+            pass
+
+        # Fallback: cargar esquema incluido en el paquete
+        try:
+            schema_text = resources.read_text('memoria_cursor.config', 'schema.json')
+            return json.loads(schema_text)
+        except Exception:
+            return None
+
+    def _validate_entry(self, entry: Entry) -> None:
+        """Validar una entrada contra el esquema JSON si está disponible.
+
+        Levanta ValueError con un mensaje claro si la validación falla.
+        """
+        schema = self._load_schema()
+        if not schema:
+            return  # Sin esquema, no validar
+
+        try:
+            validate(instance=entry.to_dict(), schema=schema)
+        except ValidationError as exc:
+            raise ValueError(f"Entrada inválida según schema.json: {exc.message}") from exc
+
     def _initialize_system(self) -> None:
         """Inicializar directorios y archivos del sistema."""
         # Crear directorios si no existen
@@ -71,10 +107,10 @@ class MemorySystem:
         """Inicializar archivo de entradas con estructura básica."""
         initial_data = {
             "metadata": {
-                "created": datetime.now().isoformat(),
-                "version": "1.0.0",
+                "created": datetime.now(timezone.utc).isoformat(),
+                "version": __import__('memoria_cursor').__version__,
                 "total_entries": 0,
-                "last_updated": datetime.now().isoformat()
+                "last_updated": datetime.now(timezone.utc).isoformat()
             },
             "entries": []
         }
@@ -86,7 +122,7 @@ class MemorySystem:
             "project": {
                 "name": self.project_root.name,
                 "description": f"Proyecto {self.project_root.name}",
-                "version": "1.0.0"
+                "version": __import__('memoria_cursor').__version__
             },
             "system": {
                 "auto_git": self.auto_git,
@@ -185,6 +221,13 @@ class MemorySystem:
         if entry_type not in valid_types:
             raise ValueError(f"Tipo de entrada inválido. Debe ser uno de: {valid_types}")
         
+        # Enforce límites desde config
+        max_len = int(self._get_config_value("system.max_content_length", 10000) or 10000)
+        if len(content) > max_len:
+            raise ValueError(f"El contenido supera el máximo permitido ({max_len} caracteres)")
+        if llm_context and len(llm_context) > max_len:
+            raise ValueError(f"El llm_context supera el máximo permitido ({max_len} caracteres)")
+
         # Crear entrada
         entry = Entry(
             entry_type=entry_type,
@@ -202,13 +245,16 @@ class MemorySystem:
             if git_info:
                 entry.git_info = git_info
         
+        # Validar contra schema si está disponible
+        self._validate_entry(entry)
+
         # Cargar datos existentes
         data = self._load_entries()
         
         # Agregar nueva entrada
         data["entries"].append(entry.to_dict())
         data["metadata"]["total_entries"] = len(data["entries"])
-        data["metadata"]["last_updated"] = datetime.now().isoformat()
+        data["metadata"]["last_updated"] = datetime.now(timezone.utc).isoformat()
         
         # Guardar datos
         self._save_entries(data)
@@ -346,8 +392,11 @@ class MemorySystem:
                 setattr(entry, field, value)
         
         # Actualizar timestamp
-        entry.timestamp = datetime.now().isoformat()
+        entry.timestamp = datetime.now(timezone.utc).isoformat()
         
+        # Validar contra schema si está disponible
+        self._validate_entry(entry)
+
         # Guardar cambios
         data = self._load_entries()
         entries = data.get("entries", [])
@@ -355,7 +404,7 @@ class MemorySystem:
         for i, entry_data in enumerate(entries):
             if entry_data.get("id") == entry_id:
                 entries[i] = entry.to_dict()
-                data["metadata"]["last_updated"] = datetime.now().isoformat()
+                data["metadata"]["last_updated"] = datetime.now(timezone.utc).isoformat()
                 self._save_entries(data)
                 return True
         
@@ -378,7 +427,7 @@ class MemorySystem:
             if entry_data.get("id") == entry_id:
                 del entries[i]
                 data["metadata"]["total_entries"] = len(entries)
-                data["metadata"]["last_updated"] = datetime.now().isoformat()
+                data["metadata"]["last_updated"] = datetime.now(timezone.utc).isoformat()
                 self._save_entries(data)
                 return True
         

@@ -5,7 +5,7 @@ Herramienta para exportar entradas del sistema de memoria en formatos optimizado
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 from ..core.memory_system import MemorySystem
 from ..core.entry import Entry
@@ -36,7 +36,15 @@ class LLMExporter:
                       output_format: str = "markdown",
                       include_git: bool = True,
                       group_by: str = "type",
-                      limit: Optional[int] = None) -> str:
+                      limit: Optional[int] = None,
+                      entry_type: Optional[str] = None,
+                      tags: Optional[List[str]] = None,
+                      search: Optional[str] = None,
+                      date_from: Optional[str] = None,
+                      date_to: Optional[str] = None,
+                      chunked: bool = False,
+                      max_chars: Optional[int] = None,
+                      max_tokens: Optional[int] = None) -> str:
         """
         Exportar entradas en formato optimizado para LLM.
         
@@ -55,60 +63,60 @@ class LLMExporter:
         # Inicializar sistema de memoria
         memory_system = MemorySystem(self.project_root)
         
-        # Obtener entradas
-        entries = memory_system.list_entries(limit=limit)
+        # Obtener entradas con filtros
+        entries = memory_system.list_entries(
+            limit=limit,
+            entry_type=entry_type,
+            tags=tags,
+            search=search,
+            date_from=date_from,
+            date_to=date_to,
+        )
         
         if not entries:
             raise ValueError("No hay entradas para exportar")
         
-        # Generar nombre de archivo
+        # Aplicar límite desde config si no se pasó por argumento
+        if limit is None:
+            try:
+                max_entries = int(memory_system._get_config_value("export.max_entries_per_export", 0) or 0)
+                if max_entries > 0:
+                    entries = entries[-max_entries:]
+            except Exception:
+                pass
+
+        # Calcular límites de chunking
+        effective_max_chars = 0
+        if max_tokens and max_tokens > 0:
+            # Aproximación: 1 token ~ 4 chars (heurística)
+            effective_max_chars = max(effective_max_chars, max_tokens * 4)
+        if max_chars and max_chars > 0:
+            effective_max_chars = max(effective_max_chars, max_chars)
+
+        # Generar nombre de archivo base
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"memory_export_{timestamp}"
         
         # Exportar según formato
         if output_format == "markdown":
-            return self._export_markdown(entries, filename, include_git, group_by)
+            return self._export_markdown(entries, filename, include_git, group_by, chunked, effective_max_chars)
         elif output_format == "json":
             return self._export_json(entries, filename, include_git)
         elif output_format == "text":
-            return self._export_text(entries, filename, include_git, group_by)
+            return self._export_text(entries, filename, include_git, group_by, chunked, effective_max_chars)
         else:
             raise ValueError(f"Formato no soportado: {output_format}")
-    
+
     def _export_markdown(self, entries: List[Entry], 
-                        filename: str, include_git: bool, group_by: str) -> str:
+                        filename: str, include_git: bool, group_by: str,
+                        chunked: bool, max_chars: int) -> str:
         """Exportar en formato Markdown."""
+        content = self._build_markdown_content(entries, include_git, group_by)
+        if chunked and max_chars and max_chars > 0:
+            return self._write_chunked(filename, content, "md", max_chars)
         output_file = self.export_dir / f"{filename}.md"
-        
         with open(output_file, 'w', encoding='utf-8') as f:
-            # Encabezado
-            f.write("# Memoria del Proyecto - Exportación para LLM\n\n")
-            f.write(f"**Generado:** {datetime.now().isoformat()}\n")
-            f.write(f"**Total de entradas:** {len(entries)}\n")
-            f.write(f"**Proyecto:** {self.project_root.name}\n\n")
-            
-            # Agrupar entradas
-            if group_by == "type":
-                grouped = self._group_by_type(entries)
-                for entry_type, type_entries in grouped.items():
-                    f.write(f"## {entry_type.upper()}\n\n")
-                    for entry in type_entries:
-                        self._write_markdown_entry(f, entry, include_git)
-                    f.write("\n")
-            
-            elif group_by == "date":
-                grouped = self._group_by_date(entries)
-                for date, date_entries in grouped.items():
-                    f.write(f"## {date}\n\n")
-                    for entry in date_entries:
-                        self._write_markdown_entry(f, entry, include_git)
-                    f.write("\n")
-            
-            else:  # Sin agrupar
-                for entry in entries:
-                    self._write_markdown_entry(f, entry, include_git)
-                    f.write("\n")
-        
+            f.write(content)
         return str(output_file)
     
     def _export_json(self, entries: List[Entry], filename: str, include_git: bool) -> str:
@@ -141,116 +149,193 @@ class LLMExporter:
         
         return str(output_file)
     
-    def _export_text(self, entries: List[Entry], filename: str, include_git: bool, group_by: str) -> str:
+    def _export_text(self, entries: List[Entry], filename: str, include_git: bool, group_by: str,
+                     chunked: bool, max_chars: int) -> str:
         """Exportar en formato texto plano."""
+        content = self._build_text_content(entries, include_git, group_by)
+        if chunked and max_chars and max_chars > 0:
+            return self._write_chunked(filename, content, "txt", max_chars)
         output_file = self.export_dir / f"{filename}.txt"
-        
         with open(output_file, 'w', encoding='utf-8') as f:
-            # Encabezado
-            f.write("MEMORIA DEL PROYECTO - EXPORTACIÓN PARA LLM\n")
-            f.write("=" * 60 + "\n\n")
-            f.write(f"Generado: {datetime.now().isoformat()}\n")
-            f.write(f"Total de entradas: {len(entries)}\n")
-            f.write(f"Proyecto: {self.project_root.name}\n\n")
-            
-            # Agrupar entradas
-            if group_by == "type":
-                grouped = self._group_by_type(entries)
-                for entry_type, type_entries in grouped.items():
-                    f.write(f"{entry_type.upper()}\n")
-                    f.write("-" * len(entry_type) + "\n\n")
-                    for entry in type_entries:
-                        self._write_text_entry(f, entry, include_git)
-                    f.write("\n")
-            
-            elif group_by == "date":
-                grouped = self._group_by_date(entries)
-                for date, date_entries in grouped.items():
-                    f.write(f"{date}\n")
-                    f.write("-" * len(date) + "\n\n")
-                    for entry in date_entries:
-                        self._write_text_entry(f, entry, include_git)
-                    f.write("\n")
-            
-            else:  # Sin agrupar
-                for entry in entries:
-                    self._write_text_entry(f, entry, include_git)
-                    f.write("\n")
-        
+            f.write(content)
         return str(output_file)
+
+    def _build_markdown_content(self, entries: List[Entry], include_git: bool, group_by: str) -> str:
+        parts: List[str] = []
+        parts.append("# Memoria del Proyecto - Exportación para LLM\n\n")
+        parts.append(f"**Generado:** {datetime.now().isoformat()}\n")
+        parts.append(f"**Total de entradas:** {len(entries)}\n")
+        parts.append(f"**Proyecto:** {self.project_root.name}\n\n")
+
+        if group_by == "type":
+            grouped = self._group_by_type(entries)
+            for entry_type, type_entries in grouped.items():
+                parts.append(f"## {entry_type.upper()}\n\n")
+                for entry in type_entries:
+                    buffer = []
+                    self._write_markdown_entry(buffer, entry, include_git, as_list=True)
+                    parts.append(''.join(buffer))
+                parts.append("\n")
+        elif group_by == "date":
+            grouped = self._group_by_date(entries)
+            for date, date_entries in grouped.items():
+                parts.append(f"## {date}\n\n")
+                for entry in date_entries:
+                    buffer = []
+                    self._write_markdown_entry(buffer, entry, include_git, as_list=True)
+                    parts.append(''.join(buffer))
+                parts.append("\n")
+        elif group_by == "tags":
+            grouped = self._group_by_tags(entries)
+            for tag, tag_entries in grouped.items():
+                parts.append(f"## #{tag}\n\n")
+                for entry in tag_entries:
+                    buffer = []
+                    self._write_markdown_entry(buffer, entry, include_git, as_list=True)
+                    parts.append(''.join(buffer))
+                parts.append("\n")
+        else:
+            for entry in entries:
+                buffer = []
+                self._write_markdown_entry(buffer, entry, include_git, as_list=True)
+                parts.append(''.join(buffer))
+                parts.append("\n")
+        return ''.join(parts)
+
+    def _build_text_content(self, entries: List[Entry], include_git: bool, group_by: str) -> str:
+        parts: List[str] = []
+        parts.append("MEMORIA DEL PROYECTO - EXPORTACIÓN PARA LLM\n")
+        parts.append("=" * 60 + "\n\n")
+        parts.append(f"Generado: {datetime.now().isoformat()}\n")
+        parts.append(f"Total de entradas: {len(entries)}\n")
+        parts.append(f"Proyecto: {self.project_root.name}\n\n")
+
+        if group_by == "type":
+            grouped = self._group_by_type(entries)
+            for entry_type, type_entries in grouped.items():
+                parts.append(f"{entry_type.upper()}\n")
+                parts.append("-" * len(entry_type) + "\n\n")
+                for entry in type_entries:
+                    buffer: List[str] = []
+                    self._write_text_entry(buffer, entry, include_git, as_list=True)
+                    parts.append(''.join(buffer))
+                parts.append("\n")
+        elif group_by == "date":
+            grouped = self._group_by_date(entries)
+            for date, date_entries in grouped.items():
+                parts.append(f"{date}\n")
+                parts.append("-" * len(date) + "\n\n")
+                for entry in date_entries:
+                    buffer = []
+                    self._write_text_entry(buffer, entry, include_git, as_list=True)
+                    parts.append(''.join(buffer))
+                parts.append("\n")
+        elif group_by == "tags":
+            grouped = self._group_by_tags(entries)
+            for tag, tag_entries in grouped.items():
+                parts.append(f"#{tag}\n")
+                parts.append("-" * (len(tag) + 1) + "\n\n")
+                for entry in tag_entries:
+                    buffer = []
+                    self._write_text_entry(buffer, entry, include_git, as_list=True)
+                    parts.append(''.join(buffer))
+                parts.append("\n")
+        else:
+            for entry in entries:
+                buffer = []
+                self._write_text_entry(buffer, entry, include_git, as_list=True)
+                parts.append(''.join(buffer))
+                parts.append("\n")
+        return ''.join(parts)
+
+    def _write_chunked(self, filename_base: str, content: str, ext: str, max_chars: int) -> str:
+        """Escribir contenido en múltiples archivos respetando un máximo de caracteres.
+
+        Intenta dividir en separadores amigables (líneas que empiezan por '### ', 'ENTRADA:' o '---').
+        Retorna la ruta del primer archivo generado.
+        """
+        if max_chars <= 0 or len(content) <= max_chars:
+            output_file = self.export_dir / f"{filename_base}.{ext}"
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(content)
+            return str(output_file)
+
+        parts: List[str] = []
+        start = 0
+        content_len = len(content)
+        while start < content_len:
+            end = min(start + max_chars, content_len)
+            # Buscar separador hacia atrás para no cortar en medio de una entrada
+            slice_chunk = content[start:end]
+            sep_idx = max(
+                slice_chunk.rfind("\n### "),
+                slice_chunk.rfind("\nENTRADA:"),
+                slice_chunk.rfind("\n---\n"),
+            )
+            if sep_idx <= 0 or end == content_len:
+                cut = end
+            else:
+                cut = start + sep_idx
+            parts.append(content[start:cut])
+            start = cut
+        # Escribir archivos
+        first_path = None
+        for i, part in enumerate(parts, start=1):
+            output_file = self.export_dir / f"{filename_base}_part{i}.{ext}"
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(part)
+            if first_path is None:
+                first_path = str(output_file)
+        return first_path if first_path else str(self.export_dir / f"{filename_base}.{ext}")
     
-    def _write_markdown_entry(self, file, entry: Entry, include_git: bool):
+    def _write_markdown_entry(self, file_or_list, entry: Entry, include_git: bool, as_list: bool = False):
         """Escribir entrada en formato Markdown."""
-        # Encabezado de entrada
-        file.write(f"### {entry.title}\n\n")
-        
-        # Metadatos
-        file.write(f"**Tipo:** {entry.entry_type}\n")
-        file.write(f"**ID:** {entry.entry_id}\n")
-        file.write(f"**Fecha:** {entry.timestamp}\n")
-        
+        writer = (lambda s: file_or_list.append(s)) if as_list else (lambda s: file_or_list.write(s))
+        writer(f"### {entry.title}\n\n")
+        writer(f"**Tipo:** {entry.entry_type}\n")
+        writer(f"**ID:** {entry.entry_id}\n")
+        writer(f"**Fecha:** {entry.timestamp}\n")
         if entry.tags:
-            file.write(f"**Etiquetas:** {', '.join(entry.tags)}\n")
-        
+            writer(f"**Etiquetas:** {', '.join(entry.tags)}\n")
         if entry.files_affected:
-            file.write(f"**Archivos:** {', '.join(entry.files_affected)}\n")
-        
-        # Información de Git
+            writer(f"**Archivos:** {', '.join(entry.files_affected)}\n")
         if include_git and entry.git_info:
             git_info = entry.git_info
-            file.write(f"**Git:** {git_info.get('current_commit', 'N/A')} ")
-            file.write(f"({git_info.get('branch', 'N/A')})")
+            writer(f"**Git:** {git_info.get('current_commit', 'N/A')} ")
+            writer(f"({git_info.get('branch', 'N/A')})")
             if not git_info.get('is_clean'):
-                file.write(" ⚠️ Cambios pendientes")
-            file.write("\n")
-        
-        file.write("\n")
-        
-        # Contenido
-        file.write(f"{entry.content}\n\n")
-        
-        # Contexto LLM
+                writer(" ⚠️ Cambios pendientes")
+            writer("\n")
+        writer("\n")
+        writer(f"{entry.content}\n\n")
         if entry.llm_context:
-            file.write("> **Contexto LLM:** " + entry.llm_context + "\n\n")
-        
-        file.write("---\n\n")
+            writer("> **Contexto LLM:** " + entry.llm_context + "\n\n")
+        writer("---\n\n")
     
-    def _write_text_entry(self, file, entry: Entry, include_git: bool):
+    def _write_text_entry(self, file_or_list, entry: Entry, include_git: bool, as_list: bool = False):
         """Escribir entrada en formato texto plano."""
-        # Encabezado de entrada
-        file.write(f"ENTRADA: {entry.title}\n")
-        file.write("-" * (len(entry.title) + 9) + "\n\n")
-        
-        # Metadatos
-        file.write(f"Tipo: {entry.entry_type}\n")
-        file.write(f"ID: {entry.entry_id}\n")
-        file.write(f"Fecha: {entry.timestamp}\n")
-        
+        writer = (lambda s: file_or_list.append(s)) if as_list else (lambda s: file_or_list.write(s))
+        writer(f"ENTRADA: {entry.title}\n")
+        writer("-" * (len(entry.title) + 9) + "\n\n")
+        writer(f"Tipo: {entry.entry_type}\n")
+        writer(f"ID: {entry.entry_id}\n")
+        writer(f"Fecha: {entry.timestamp}\n")
         if entry.tags:
-            file.write(f"Etiquetas: {', '.join(entry.tags)}\n")
-        
+            writer(f"Etiquetas: {', '.join(entry.tags)}\n")
         if entry.files_affected:
-            file.write(f"Archivos: {', '.join(entry.files_affected)}\n")
-        
-        # Información de Git
+            writer(f"Archivos: {', '.join(entry.files_affected)}\n")
         if include_git and entry.git_info:
             git_info = entry.git_info
-            file.write(f"Git: {git_info.get('current_commit', 'N/A')} ")
-            file.write(f"({git_info.get('branch', 'N/A')})")
+            writer(f"Git: {git_info.get('current_commit', 'N/A')} ")
+            writer(f"({git_info.get('branch', 'N/A')})")
             if not git_info.get('is_clean'):
-                file.write(" [CAMBIOS PENDIENTES]")
-            file.write("\n")
-        
-        file.write("\n")
-        
-        # Contenido
-        file.write(f"CONTENIDO:\n{entry.content}\n\n")
-        
-        # Contexto LLM
+                writer(" [CAMBIOS PENDIENTES]")
+            writer("\n")
+        writer("\n")
+        writer(f"CONTENIDO:\n{entry.content}\n\n")
         if entry.llm_context:
-            file.write(f"CONTEXTO LLM: {entry.llm_context}\n\n")
-        
-        file.write("=" * 60 + "\n\n")
+            writer(f"CONTEXTO LLM: {entry.llm_context}\n\n")
+        writer("=" * 60 + "\n\n")
     
     def _group_by_type(self, entries: List[Entry]) -> Dict[str, List[Entry]]:
         """Agrupar entradas por tipo."""

@@ -11,12 +11,12 @@ Una herramienta sencilla, liviana y portable para registrar información relevan
 pip install memoria-cursor
 
 # Instalación desde fuente
-git clone https://github.com/tu-usuario/memoria-cursor.git
+git clone https://github.com/jgjuara/memoria-cursor.git
 cd memoria-cursor
 pip install -e .
 
 # Instalación usando uv (más rápido)
-uv pip install git+https://github.com/tu-usuario/memoria-cursor.git
+uv pip install git+https://github.com/jgjuara/memoria-cursor.git
 ```
 
 ## 🎯 Características
@@ -87,9 +87,96 @@ memoria export
 # Exportar en JSON
 memoria export --format json
 
-# Exportar solo decisiones
-memoria list --type decision | memoria export
+# Exportar filtrando por tipo y etiquetas
+memoria export --type decision --tags arquitectura --tags base-datos
+
+# Exportar por rango de fechas y búsqueda de texto
+memoria export --date-from 2025-01-01 --date-to 2025-12-31 --search "postgresql"
+
+# Agrupar por tags
+memoria export --group-by tags
+
+# Chunking por tamaño aproximado (tokens ~ 4 chars)
+memoria export --chunked --max-tokens 3000   # ~ 12k chars por archivo
+memoria export --chunked --max-chars 12000   # límite directo por caracteres
+
+# Resumen ejecutivo
+memoria export --summary
 ```
+
+## 🐍 Uso Programático (API Python)
+
+### Importación e Inicialización
+
+```python
+from memoria_cursor import MemorySystem
+
+# Crear instancia del sistema
+m = MemorySystem('nombre-proyecto')
+
+# Inicializar el proyecto (requerido antes de usar)
+m.initialize_project()
+```
+
+### Crear Entradas Programáticamente
+
+```python
+# Crear una nota
+entry_id = m.create_entry(
+    'note',  # tipo: decision, change, context, bug, feature, note
+    'Configuración inicial del proyecto',  # título
+    'Se instaló memoria-cursor y se creó la documentación base...',  # contenido
+    ['configuracion', 'memoria-cursor', 'documentacion']  # etiquetas
+)
+
+# Crear una decisión
+decision_id = m.create_entry(
+    'decision',
+    'Elección de base de datos',
+    'Se eligió PostgreSQL por su robustez ACID y soporte JSON nativo',
+    ['arquitectura', 'base-datos', 'postgresql'],
+    files_affected=['config/database.py', 'models/'],
+    llm_context='Decisión de arquitectura que afecta toda la persistencia del sistema'
+)
+```
+
+### Consultar y Filtrar Entradas
+
+```python
+# Obtener todas las entradas
+entries = m.list_entries()
+
+# Filtrar por tipo
+decisions = m.list_entries(entry_type='decision')
+
+# Buscar por etiquetas
+config_entries = m.list_entries(tags=['configuracion'])
+
+# Obtener entrada específica
+entry = m.get_entry(entry_id)
+```
+
+### Exportar para LLM
+
+```python
+# Exportar en formato Markdown
+m.export_entries()
+
+# Exportar en formato JSON
+m.export_entries(format='json')
+```
+
+### Parámetros del Método create_entry
+
+- `entry_type` (str): Tipo de entrada (requerido)
+- `title` (str): Título descriptivo (requerido)  
+- `content` (str): Contenido principal (requerido)
+- `tags` (List[str], opcional): Lista de etiquetas
+- `files_affected` (List[str], opcional): Archivos afectados
+- `llm_context` (str, opcional): Contexto específico para agentes LLM
+- `related_entries` (List[str], opcional): IDs de entradas relacionadas
+
+**Tipos de entrada válidos**: `decision`, `change`, `context`, `bug`, `feature`, `note`
 
 ## 📁 Estructura del Sistema
 
@@ -159,8 +246,11 @@ memoria_cursor/
 
 ## 📚 Documentación
 
+- **[🚀 Guía para LLMs](docs/llm-guide.md)** - **Documentación específica para agentes LLM** ⭐
+- **[📋 Plantillas para LLMs](docs/llm-templates.md)** - **Plantillas de código listas para usar** ⭐
 - **[Guía de Uso](docs/guia-uso.md)** - Documentación completa
 - **[Ejemplos](docs/ejemplos.md)** - Casos de uso prácticos
+- **[API Python](docs/api-python.md)** - Documentación completa de la API Python
 - **[Reglas para Agentes LLM](docs/reglas-agentes-llm.md)** - Instrucciones específicas para IA
 - **[Estrategia de Integración](estrategia-integracion.md)** - Análisis de opciones de integración
 

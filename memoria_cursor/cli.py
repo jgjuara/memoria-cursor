@@ -10,10 +10,11 @@ from .core.memory_system import MemorySystem
 from .tools.create import create_entry, create_entry_interactive
 from .tools.list import list_entries, display_entries, display_entry_details, search_entries_interactive
 from .tools.export import LLMExporter
+from . import __version__
 
 
 @click.group()
-@click.version_option(version="1.0.0", prog_name="memoria-cursor")
+@click.version_option(version=__version__, prog_name="memoria-cursor")
 @click.option('--project-root', '-p', default='.', 
               help='Ruta raíz del proyecto (por defecto: directorio actual)')
 @click.pass_context
@@ -151,8 +152,16 @@ def show(ctx, entry_id, show_git):
               default='type', help='Agrupar entradas por')
 @click.option('--limit', '-n', type=int, help='Número máximo de entradas a exportar')
 @click.option('--summary', is_flag=True, help='Exportar solo resumen ejecutivo')
+@click.option('--chunked', is_flag=True, help='Dividir exportación en múltiples archivos')
+@click.option('--max-chars', type=int, help='Máximo de caracteres por archivo (aprox tokens*4)')
+@click.option('--max-tokens', type=int, help='Máximo de tokens estimados por archivo')
+@click.option('--type', '-t', 'entry_type', help='Filtrar por tipo de entrada')
+@click.option('--tags', '-g', multiple=True, help='Filtrar por etiquetas')
+@click.option('--search', '-s', help='Buscar en título, contenido y contexto')
+@click.option('--date-from', help='Fecha de inicio (YYYY-MM-DD)')
+@click.option('--date-to', help='Fecha de fin (YYYY-MM-DD)')
 @click.pass_context
-def export(ctx, output_format, include_git, group_by, limit, summary):
+def export(ctx, output_format, include_git, group_by, limit, summary, entry_type, tags, search, date_from, date_to, chunked, max_chars, max_tokens):
     """Exportar entradas en formato optimizado para LLM."""
     project_root = ctx.obj['PROJECT_ROOT']
     
@@ -166,7 +175,15 @@ def export(ctx, output_format, include_git, group_by, limit, summary):
                 output_format=output_format,
                 include_git=include_git,
                 group_by=group_by,
-                limit=limit
+                limit=limit,
+                entry_type=entry_type,
+                tags=list(tags),
+                search=search,
+                date_from=date_from,
+                date_to=date_to,
+                chunked=chunked,
+                max_chars=max_chars,
+                max_tokens=max_tokens
             )
         
         click.echo(f"✅ Exportación completada: {output_file}")

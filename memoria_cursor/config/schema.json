@@ -53,8 +53,7 @@
     "related_entries": {
       "type": "array",
       "items": {
-        "type": "string",
-        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        "type": "string"
       },
       "description": "Lista de IDs de entradas relacionadas para contexto y trazabilidad"
     },
@@ -77,6 +76,10 @@
         "is_clean": {
           "type": "boolean",
           "description": "Indica si el repositorio está limpio (sin cambios pendientes)"
+        },
+        "remote_url": {
+          "type": "string",
+          "description": "URL del repositorio remoto"
         }
       },
       "required": ["current_commit", "branch", "is_clean"],

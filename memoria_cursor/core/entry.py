@@ -4,7 +4,7 @@ Clase Entry para representar entradas del sistema de memoria.
 
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, field
 
@@ -41,7 +41,7 @@ class Entry:
     def __post_init__(self):
         """Inicializar valores por defecto después de la creación."""
         if self.timestamp is None:
-            self.timestamp = datetime.now().isoformat()
+            self.timestamp = datetime.now(timezone.utc).isoformat()
         
         if self.entry_id is None:
             self.entry_id = self._generate_id()
@@ -52,7 +52,7 @@ class Entry:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convertir entrada a diccionario."""
-        return {
+        data: Dict[str, Any] = {
             "id": self.entry_id,
             "timestamp": self.timestamp,
             "type": self.entry_type,
@@ -60,10 +60,13 @@ class Entry:
             "content": self.content,
             "tags": self.tags,
             "files_affected": self.files_affected,
-            "llm_context": self.llm_context,
-            "git_info": self.git_info,
-            "related_entries": self.related_entries
+            "related_entries": self.related_entries,
         }
+        if self.llm_context is not None:
+            data["llm_context"] = self.llm_context
+        if self.git_info is not None:
+            data["git_info"] = self.git_info
+        return data
     
     def to_json(self) -> str:
         """Convertir entrada a JSON string."""
@@ -131,7 +134,7 @@ class Entry:
     def update_content(self, new_content: str) -> None:
         """Actualizar contenido de la entrada."""
         self.content = new_content
-        self.timestamp = datetime.now().isoformat()
+        self.timestamp = datetime.now(timezone.utc).isoformat()
     
     def has_tag(self, tag: str) -> bool:
         """Verificar si la entrada tiene una etiqueta específica."""
@@ -140,9 +143,13 @@ class Entry:
     def matches_search(self, search_term: str) -> bool:
         """Verificar si la entrada coincide con un término de búsqueda."""
         search_lower = search_term.lower()
-        return (search_lower in self.title.lower() or 
-                search_lower in self.content.lower() or
-                any(search_lower in tag.lower() for tag in self.tags))
+        return (
+            search_lower in self.title.lower()
+            or search_lower in self.content.lower()
+            or (self.llm_context is not None and search_lower in self.llm_context.lower())
+            or any(search_lower in tag.lower() for tag in self.tags)
+            or any(search_lower in file_path.lower() for file_path in self.files_affected)
+        )
     
     def __str__(self) -> str:
         """Representación string de la entrada."""

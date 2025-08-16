@@ -57,3 +57,7 @@ config/local.json
 # Archivos de coverage
 .coverage.*
 coverage.xml
+# Sistema de Memoria
+entries/
+export/
+config/install.json

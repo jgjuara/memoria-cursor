@@ -214,4 +214,258 @@ fi
 memoria create note "Deploy completado - $(date)" "Deploy exitoso a producción. Versión: $VERSION. Cambios incluidos: $CHANGES" --tags "deploy" "produccion"
 ```
 
-Estos ejemplos muestran cómo usar el sistema de memoria de manera efectiva en diferentes escenarios del desarrollo de software.
+## Ejemplos de Uso Programático (Python)
+
+### 1. Configuración Inicial de un Proyecto
+
+```python
+from memoria_cursor import MemorySystem
+
+# Inicializar sistema en un proyecto
+m = MemorySystem('mi-proyecto-web')
+m.initialize_project()
+
+# Registrar configuración inicial
+config_id = m.create_entry(
+    'context',
+    'Configuración inicial del proyecto',
+    'Proyecto web con Python Flask, PostgreSQL y Redis. Requiere Python 3.8+, PostgreSQL 12+, Redis 6+. Variables de entorno: DATABASE_URL, REDIS_URL, SECRET_KEY.',
+    ['configuracion', 'inicial', 'flask', 'postgresql', 'redis'],
+    files_affected=['requirements.txt', '.env.example', 'config.py'],
+    llm_context='Información esencial para setup y desarrollo del proyecto'
+)
+
+print(f"Proyecto inicializado con ID de configuración: {config_id}")
+```
+
+### 2. Documentar Decisiones de Arquitectura
+
+```python
+# Decisión sobre base de datos
+db_decision_id = m.create_entry(
+    'decision',
+    'Elección de PostgreSQL como base de datos principal',
+    'Se eligió PostgreSQL por: robustez ACID, soporte JSON nativo, capacidades de consulta avanzadas, excelente rendimiento para cargas complejas. Alternativas consideradas: MongoDB (menos consistencia ACID), MySQL (limitaciones en JSON), SQLite (limitaciones de concurrencia).',
+    ['arquitectura', 'base-datos', 'postgresql', 'decision-tecnica'],
+    files_affected=['config/database.py', 'models/', 'migrations/'],
+    llm_context='Decisión fundamental que afecta toda la arquitectura de persistencia del sistema',
+    related_entries=[config_id]
+)
+
+# Decisión sobre patrón de diseño
+pattern_decision_id = m.create_entry(
+    'decision',
+    'Implementación de Repository Pattern',
+    'Se implementará el patrón Repository para abstraer la capa de acceso a datos. Beneficios: testabilidad mejorada, desacoplamiento, flexibilidad para cambios futuros, facilita testing con mocks.',
+    ['patron-diseno', 'repository', 'arquitectura', 'testing'],
+    files_affected=['models.py', 'repositories.py', 'services.py'],
+    llm_context='Patrón que mejora la arquitectura y facilita el testing del sistema',
+    related_entries=[db_decision_id]
+)
+```
+
+### 3. Registrar Implementaciones Basadas en Decisiones
+
+```python
+# Implementación del Repository Pattern
+repo_impl_id = m.create_entry(
+    'change',
+    'Implementación de Repository Pattern',
+    'Se implementó el patrón Repository según la decisión de arquitectura anterior. Se crearon las clases base y las implementaciones específicas para PostgreSQL. Incluye: interfaz base, implementación PostgreSQL, tests unitarios.',
+    ['implementacion', 'repository', 'postgresql'],
+    files_affected=['repositories/base.py', 'repositories/postgresql.py', 'tests/test_repositories.py'],
+    llm_context='Implementación que materializa la decisión de arquitectura del Repository Pattern',
+    related_entries=[pattern_decision_id]
+)
+
+# Implementación de autenticación
+auth_impl_id = m.create_entry(
+    'change',
+    'Implementación de sistema de autenticación JWT',
+    'Se implementó sistema de autenticación basado en JWT tokens. Incluye: login/logout, validación de tokens, middleware de autenticación, tests de integración. Basado en la arquitectura de base de datos PostgreSQL.',
+    ['implementacion', 'autenticacion', 'jwt', 'seguridad'],
+    files_affected=['auth.py', 'middleware.py', 'models.py', 'tests/test_auth.py'],
+    llm_context='Sistema de seguridad crítico para la aplicación',
+    related_entries=[db_decision_id, repo_impl_id]
+)
+```
+
+### 4. Documentar Bugs y Soluciones
+
+```python
+# Bug de concurrencia
+bug_id = m.create_entry(
+    'bug',
+    'Race condition en procesamiento de pagos',
+    'Se identificó y resolvió race condition en el procesamiento de pagos cuando múltiples usuarios intentaban pagar simultáneamente. Síntomas: transacciones duplicadas, inconsistencias en saldos. Solución: implementación de locks optimistas y retry logic.',
+    ['bug', 'concurrencia', 'transacciones', 'resuelto'],
+    files_affected=['payment_processor.py', 'models.py', 'tests/test_payments.py'],
+    llm_context='Problema crítico de concurrencia que afecta la integridad financiera',
+    related_entries=[db_decision_id]
+)
+
+# Solución implementada
+solution_id = m.create_entry(
+    'change',
+    'Implementación de locks optimistas para pagos',
+    'Se implementó sistema de locks optimistas y retry logic para resolver el problema de race condition en pagos. Incluye: versionado de entidades, retry automático, logging de conflictos, tests de concurrencia.',
+    ['implementacion', 'concurrencia', 'locks', 'optimizacion'],
+    files_affected=['payment_processor.py', 'models.py', 'utils/locks.py'],
+    llm_context='Solución que previene problemas de concurrencia en transacciones críticas',
+    related_entries=[bug_id]
+)
+```
+
+### 5. Scripts de Automatización
+
+```python
+# Script para registrar deployments automáticamente
+def record_deployment(version, changes, environment):
+    """Registra automáticamente información de deployment"""
+    m.create_entry(
+        'change',
+        f'Deployment {version} a {environment}',
+        f'Deployment automático completado. Cambios incluidos: {", ".join(changes)}. Ambiente: {environment}. Timestamp: {datetime.now().isoformat()}.',
+        ['deployment', 'automatizacion', environment],
+        files_affected=changes,
+        llm_context='Información para debugging y auditoría de deployments automáticos'
+    )
+
+# Script para registrar métricas de rendimiento
+def record_performance_metrics(metrics_data):
+    """Registra métricas de rendimiento del sistema"""
+    m.create_entry(
+        'note',
+        'Métricas de rendimiento del sistema',
+        f'CPU promedio: {metrics_data["cpu_avg"]}%, CPU pico: {metrics_data["cpu_peak"]}%. Memoria: {metrics_data["memory_used"]}MB de {metrics_data["memory_total"]}MB. Latencia API: {metrics_data["api_latency"]}ms. Timestamp: {datetime.now().isoformat()}.',
+        ['metricas', 'rendimiento', 'monitoreo'],
+        llm_context='Datos para análisis de tendencias de rendimiento y detección de problemas',
+        files_affected=['monitoring/metrics.py', 'logs/performance.log']
+    )
+
+# Uso de los scripts
+record_deployment('v1.2.0', ['auth.py', 'middleware.py'], 'production')
+record_performance_metrics({
+    'cpu_avg': 45.2,
+    'cpu_peak': 78.9,
+    'memory_used': 2048,
+    'memory_total': 4096,
+    'api_latency': 125
+})
+```
+
+### 6. Consultas y Análisis de Memoria
+
+```python
+# Análisis de decisiones recientes
+def analyze_recent_decisions():
+    """Analiza decisiones de arquitectura recientes"""
+    recent_decisions = m.list_entries(
+        entry_type='decision',
+        limit=10
+    )
+    
+    print(f"Decisiones recientes ({len(recent_decisions)}):")
+    for decision in recent_decisions:
+        print(f"- {decision.title} ({decision.created_at})")
+        print(f"  Etiquetas: {', '.join(decision.tags)}")
+        print(f"  Archivos: {', '.join(decision.files_affected)}")
+        print()
+
+# Búsqueda de contexto relacionado
+def find_related_context(search_term):
+    """Busca contexto relacionado con un término"""
+    related_entries = m.list_entries(
+        search=search_term,
+        limit=20
+    )
+    
+    print(f"Entradas relacionadas con '{search_term}':")
+    for entry in related_entries:
+        print(f"- [{entry.entry_type.upper()}] {entry.title}")
+        if entry.llm_context:
+            print(f"  Contexto LLM: {entry.llm_context}")
+        print()
+
+# Análisis de impacto de cambios
+def analyze_change_impact(file_path):
+    """Analiza el impacto de cambios en un archivo específico"""
+    affected_entries = m.list_entries(
+        files_affected=[file_path]
+    )
+    
+    print(f"Cambios que afectan '{file_path}':")
+    for entry in affected_entries:
+        print(f"- [{entry.entry_type.upper()}] {entry.title}")
+        print(f"  Fecha: {entry.created_at}")
+        print(f"  Etiquetas: {', '.join(entry.tags)}")
+        if entry.related_entries:
+            print(f"  Relacionado con: {len(entry.related_entries)} entradas")
+        print()
+
+# Uso de las funciones de análisis
+analyze_recent_decisions()
+find_related_context('postgresql')
+analyze_change_impact('models.py')
+```
+
+### 7. Integración con Workflows de Desarrollo
+
+```python
+# Hook de pre-commit para documentar cambios
+def document_code_changes():
+    """Documenta cambios antes del commit"""
+    # Obtener archivos modificados (ejemplo simplificado)
+    modified_files = ['auth.py', 'models.py', 'tests/test_auth.py']
+    
+    if modified_files:
+        m.create_entry(
+            'change',
+            'Cambios en sistema de autenticación',
+            f'Cambios realizados en: {", ".join(modified_files)}. Commit: {get_git_commit_hash()}. Rama: {get_git_branch()}.',
+            ['commit', 'autenticacion'],
+            files_affected=modified_files,
+            llm_context='Documentación automática de cambios para trazabilidad'
+        )
+
+# Función para obtener información de Git (ejemplo)
+def get_git_commit_hash():
+    return "abc123def"  # En implementación real, obtener de Git
+
+def get_git_branch():
+    return "feature/auth-system"  # En implementación real, obtener de Git
+
+# Documentar automáticamente antes de commit
+document_code_changes()
+```
+
+### 8. Exportación y Compartir Memoria
+
+```python
+# Exportar memoria para compartir con equipo
+def export_project_memory():
+    """Exporta la memoria del proyecto en formato legible"""
+    # Exportar en Markdown
+    m.export_entries()
+    
+    # Exportar en JSON para análisis
+    m.export_entries(format='json')
+    
+    # Crear resumen ejecutivo
+    stats = m.get_statistics()
+    recent_entries = m.list_entries(limit=5)
+    
+    print("=== RESUMEN EJECUTIVO DEL PROYECTO ===")
+    print(f"Total de entradas: {stats['total_entries']}")
+    print(f"Última actualización: {stats['last_updated']}")
+    print("\nEntradas recientes:")
+    for entry in recent_entries:
+        print(f"- [{entry.entry_type.upper()}] {entry.title}")
+    
+    print("\nMemoria exportada en directorio 'export/'")
+
+# Exportar memoria completa
+export_project_memory()
+```
+
+Estos ejemplos muestran cómo usar programáticamente el módulo `memoria-cursor` para diferentes casos de uso, desde documentación básica hasta automatización avanzada y análisis de memoria del proyecto.

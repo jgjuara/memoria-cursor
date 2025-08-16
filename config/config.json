@@ -1,0 +1,18 @@
+{
+  "project": {
+    "name": "memoria-cursor",
+    "description": "Sistema de memoria para agentes LLM",
+    "version": "1.0.1"
+  },
+  "system": {
+    "auto_git": true,
+    "default_entry_type": "note",
+    "max_content_length": 10000,
+    "backup_enabled": true
+  },
+  "export": {
+    "default_format": "markdown",
+    "include_git_info": true,
+    "group_by": "type"
+  }
+}

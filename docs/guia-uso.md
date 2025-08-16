@@ -187,7 +187,7 @@ El archivo `config/config.json` contiene la configuración del sistema:
   "project": {
     "name": "Nombre del Proyecto",
     "description": "Descripción del proyecto",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "system": {
     "auto_git": true,
@@ -367,3 +367,284 @@ Para reportar problemas o solicitar mejoras:
 - Crear un issue en el repositorio de memoria-cursor
 - Incluir información del sistema y pasos para reproducir
 - Adjuntar archivos de configuración relevantes
+
+## Uso Programático (API Python)
+
+### Importación e Inicialización
+
+Para usar el módulo desde código Python, primero debes importar la clase principal:
+
+```python
+from memoria_cursor import MemorySystem
+```
+
+Luego crear una instancia del sistema y inicializarlo:
+
+```python
+# Crear instancia del sistema
+m = MemorySystem('nombre-proyecto')
+
+# Inicializar el proyecto (REQUERIDO antes de usar cualquier método)
+m.initialize_project()
+```
+
+**Nota importante**: Siempre debes llamar `initialize_project()` antes de usar otros métodos. Este método:
+- Crea la estructura de directorios necesaria
+- Inicializa archivos de configuración
+- Configura la integración con Git si está disponible
+
+### Crear Entradas Programáticamente
+
+El método principal para crear entradas es `create_entry()`. Su firma es:
+
+```python
+def create_entry(
+    self,
+    entry_type: str,           # Tipo de entrada (requerido)
+    title: str,                # Título descriptivo (requerido)
+    content: str,              # Contenido principal (requerido)
+    tags: Optional[List[str]] = None,           # Etiquetas opcionales
+    files_affected: Optional[List[str]] = None, # Archivos afectados opcionales
+    llm_context: Optional[str] = None,          # Contexto para LLM opcional
+    related_entries: Optional[List[str]] = None # Entradas relacionadas opcionales
+) -> str
+```
+
+**Ejemplos de uso**:
+
+```python
+# Crear una nota simple
+entry_id = m.create_entry(
+    'note',
+    'Configuración inicial del proyecto',
+    'Se instaló memoria-cursor y se creó la documentación base del proyecto.',
+    ['configuracion', 'memoria-cursor', 'documentacion']
+)
+
+# Crear una decisión con contexto completo
+decision_id = m.create_entry(
+    'decision',
+    'Elección de base de datos',
+    'Se eligió PostgreSQL por su robustez ACID, soporte JSON nativo y excelente rendimiento.',
+    ['arquitectura', 'base-datos', 'postgresql'],
+    files_affected=['config/database.py', 'models/', 'migrations/'],
+    llm_context='Decisión de arquitectura que afecta toda la capa de persistencia del sistema',
+    related_entries=[entry_id]  # Referenciar entrada anterior
+)
+
+# Crear un cambio con archivos afectados
+change_id = m.create_entry(
+    'change',
+    'Implementación de autenticación JWT',
+    'Se implementó sistema de autenticación basado en JWT tokens.',
+    ['implementacion', 'autenticacion', 'jwt'],
+    files_affected=['auth.py', 'middleware.py', 'models.py'],
+    llm_context='Cambio que afecta la seguridad y autenticación de usuarios'
+)
+```
+
+### Consultar y Filtrar Entradas
+
+#### Listar Entradas
+
+```python
+# Obtener todas las entradas
+all_entries = m.list_entries()
+
+# Filtrar por tipo
+decisions = m.list_entries(entry_type='decision')
+changes = m.list_entries(entry_type='change')
+notes = m.list_entries(entry_type='note')
+
+# Limitar número de resultados
+recent_entries = m.list_entries(limit=10)
+
+# Filtrar por etiquetas
+config_entries = m.list_entries(tags=['configuracion'])
+arch_entries = m.list_entries(tags=['arquitectura'])
+```
+
+#### Búsqueda Avanzada
+
+```python
+# Buscar por texto en título y contenido
+search_results = m.list_entries(search='postgresql')
+
+# Filtrar por rango de fechas
+from datetime import datetime, timedelta
+yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+recent_entries = m.list_entries(date_from=yesterday)
+
+# Combinar filtros
+recent_decisions = m.list_entries(
+    entry_type='decision',
+    limit=5,
+    tags=['arquitectura']
+)
+```
+
+#### Obtener Entrada Específica
+
+```python
+# Obtener entrada por ID
+entry = m.get_entry(entry_id)
+
+if entry:
+    print(f"Título: {entry.title}")
+    print(f"Tipo: {entry.entry_type}")
+    print(f"Contenido: {entry.content}")
+    print(f"Etiquetas: {entry.tags}")
+    print(f"Fecha: {entry.created_at}")
+```
+
+### Exportar para LLM
+
+```python
+# Exportar en formato Markdown (por defecto)
+m.export_entries()
+
+# Exportar en formato JSON
+m.export_entries(format='json')
+
+# Exportar solo entradas de un tipo específico
+decisions = m.list_entries(entry_type='decision')
+# Luego procesar manualmente o usar herramientas de exportación
+```
+
+### Gestión de Entradas
+
+```python
+# Actualizar una entrada existente
+m.update_entry(
+    entry_id,
+    title='Título actualizado',
+    content='Contenido actualizado',
+    tags=['nueva', 'etiqueta']
+)
+
+# Eliminar una entrada
+m.delete_entry(entry_id)
+
+# Obtener estadísticas del sistema
+stats = m.get_statistics()
+print(f"Total de entradas: {stats['total_entries']}")
+print(f"Última actualización: {stats['last_updated']}")
+```
+
+### Manejo de Errores
+
+```python
+try:
+    # Crear entrada
+    entry_id = m.create_entry(
+        'note',
+        'Título de prueba',
+        'Contenido de prueba',
+        ['test']
+    )
+    print(f"Entrada creada con ID: {entry_id}")
+    
+except ValueError as e:
+    print(f"Error de validación: {e}")
+    # Verificar tipos de entrada válidos
+    print("Tipos válidos: decision, change, context, bug, feature, note")
+    
+except Exception as e:
+    print(f"Error inesperado: {e}")
+    # Verificar que el proyecto esté inicializado
+    if not m.project_root.exists():
+        print("El proyecto no está inicializado. Ejecuta initialize_project() primero.")
+```
+
+### Casos de Uso Comunes
+
+#### Para Agentes LLM
+
+```python
+# Antes de implementar cambios, revisar contexto
+recent_context = m.list_entries(
+    entry_type='context',
+    limit=5
+)
+
+# Buscar decisiones relacionadas
+related_decisions = m.list_entries(
+    entry_type='decision',
+    search='base de datos'
+)
+
+# Registrar nueva implementación
+m.create_entry(
+    'change',
+    'Implementación basada en decisiones anteriores',
+    'Se implementó siguiendo las decisiones de arquitectura documentadas.',
+    ['implementacion'],
+    related_entries=[d.entry_id for d in related_decisions]
+)
+```
+
+#### Para Scripts de Automatización
+
+```python
+# Script que registra automáticamente cambios
+def record_deployment(deployment_info):
+    m.create_entry(
+        'change',
+        f'Deployment {deployment_info["version"]}',
+        f'Deployment automático completado. Cambios: {deployment_info["changes"]}',
+        ['deployment', 'automatizacion'],
+        llm_context='Información para debugging y auditoría de deployments'
+    )
+
+# Script que registra métricas
+def record_metrics(metrics_data):
+    m.create_entry(
+        'note',
+        'Métricas de rendimiento',
+        f'CPU: {metrics_data["cpu"]}%, Memoria: {metrics_data["memory"]}%',
+        ['metricas', 'rendimiento'],
+        llm_context='Datos para análisis de tendencias de rendimiento'
+    )
+```
+
+### Mejores Prácticas para Uso Programático
+
+1. **Siempre inicializar**: Llamar `initialize_project()` antes de usar otros métodos
+2. **Manejar errores**: Usar try-catch para manejar errores de validación
+3. **Validar parámetros**: Verificar que los tipos de entrada sean válidos
+4. **Usar etiquetas consistentes**: Mantener un vocabulario de etiquetas coherente
+5. **Proporcionar contexto LLM**: Usar el parámetro `llm_context` para información específica de IA
+6. **Referenciar entradas**: Usar `related_entries` para crear trazabilidad
+7. **Manejar archivos**: Especificar `files_affected` para cambios de código
+
+### Solución de Problemas Comunes
+
+#### Error: "Tipo de entrada inválido"
+```python
+# ❌ INCORRECTO
+m.create_entry('Configuración', 'Título', 'Contenido')
+
+# ✅ CORRECTO
+m.create_entry('note', 'Configuración', 'Título', 'Contenido')
+```
+
+#### Error: "El proyecto no está inicializado"
+```python
+# ❌ INCORRECTO
+m = MemorySystem('proyecto')
+m.create_entry('note', 'Título', 'Contenido')
+
+# ✅ CORRECTO
+m = MemorySystem('proyecto')
+m.initialize_project()  # REQUERIDO
+m.create_entry('note', 'Título', 'Contenido')
+```
+
+#### Error: "Orden de parámetros incorrecto"
+```python
+# ❌ INCORRECTO - orden mal
+m.create_entry('Título', 'Contenido', 'note', ['tags'])
+
+# ✅ CORRECTO - orden correcto
+m.create_entry('note', 'Título', 'Contenido', ['tags'])
+```

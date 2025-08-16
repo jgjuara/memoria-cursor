@@ -2,7 +2,7 @@
   "project": {
     "name": "memoria-cursor",
     "description": "Sistema de memoria para agentes LLM",
-    "version": "1.0.0"
+    "version": "1.0.1"
   },
   "system": {
     "auto_git": true,
