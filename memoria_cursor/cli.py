@@ -13,7 +13,7 @@ from .tools.export import LLMExporter
 from . import __version__
 
 
-@click.group()
+@click.group(context_settings=dict(allow_interspersed_args=True))
 @click.version_option(version=__version__, prog_name="memoria-cursor")
 @click.option('--project-root', '-p', default='.', 
               help='Ruta raíz del proyecto (por defecto: directorio actual)')
@@ -29,7 +29,7 @@ def main(ctx, project_root):
     ctx.obj['PROJECT_ROOT'] = Path(project_root).resolve()
 
 
-@main.command()
+@main.command(context_settings=dict(allow_interspersed_args=True))
 @click.argument('type')
 @click.argument('title')
 @click.argument('content')

@@ -144,7 +144,34 @@ class MemorySystem:
         """Cargar entradas desde el archivo JSON."""
         try:
             with open(self.entries_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                data = json.load(f)
+                # Asegurar estructura mínima válida
+                if not isinstance(data, dict):
+                    return {
+                        "metadata": {
+                            "created": datetime.now(timezone.utc).isoformat(),
+                            "version": __import__('memoria_cursor').__version__,
+                            "total_entries": 0,
+                            "last_updated": datetime.now(timezone.utc).isoformat(),
+                        },
+                        "entries": [],
+                    }
+                if not isinstance(data.get("entries"), list):
+                    data["entries"] = []
+                if not isinstance(data.get("metadata"), dict):
+                    data["metadata"] = {
+                        "created": datetime.now(timezone.utc).isoformat(),
+                        "version": __import__('memoria_cursor').__version__,
+                        "total_entries": len(data["entries"]),
+                        "last_updated": datetime.now(timezone.utc).isoformat(),
+                    }
+                else:
+                    md = data["metadata"]
+                    md.setdefault("created", datetime.now(timezone.utc).isoformat())
+                    md.setdefault("version", __import__('memoria_cursor').__version__)
+                    md.setdefault("total_entries", len(data["entries"]))
+                    md.setdefault("last_updated", datetime.now(timezone.utc).isoformat())
+                return data
         except (FileNotFoundError, json.JSONDecodeError):
             # Si hay error, reinicializar el archivo
             self._initialize_entries_file()
@@ -177,15 +204,14 @@ class MemorySystem:
         try:
             with open(self.config_file, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-            
-            keys = key_path.split('.')
-            value = config
-            
-            for key in keys:
-                value = value.get(key, default)
-                if value is None:
+
+            value: Any = config
+            for key in key_path.split('.'):
+                if not isinstance(value, dict):
                     return default
-            
+                if key not in value:
+                    return default
+                value = value[key]
             return value
         except Exception:
             return default
