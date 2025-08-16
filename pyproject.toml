@@ -60,7 +60,7 @@ Repository = "https://github.com/jgjuara/memoria-cursor"
 "Bug Tracker" = "https://github.com/jgjuara/memoria-cursor/issues"
 
 [tool.setuptools]
-packages = ["memoria_cursor", "memoria_cursor.*"]
+packages = {find = {}}
 
 [tool.setuptools.package-data]
 memoria_cursor = ["templates/*", "config/*.json"]
