@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "memoria-cursor"
-version = "1.0.1"
+version = "1.0.2"
 description = "Sistema de memoria para agentes LLM"
 readme = "README.md"
 license = {text = "MIT"}
@@ -60,7 +60,7 @@ Repository = "https://github.com/jgjuara/memoria-cursor"
 "Bug Tracker" = "https://github.com/jgjuara/memoria-cursor/issues"
 
 [tool.setuptools]
-packages = ["memoria_cursor"]
+packages = ["memoria_cursor", "memoria_cursor.*"]
 
 [tool.setuptools.package-data]
 memoria_cursor = ["templates/*", "config/*.json"]
