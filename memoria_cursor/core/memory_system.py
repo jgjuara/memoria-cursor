@@ -183,6 +183,19 @@ class MemorySystem:
         if self._get_config_value("system.backup_enabled", True):
             self._create_backup()
         
+        # Normalizar estructura antes de guardar
+        if not isinstance(data, dict):
+            data = {"metadata": {}, "entries": []}
+        if not isinstance(data.get("entries"), list):
+            data["entries"] = []
+        if not isinstance(data.get("metadata"), dict):
+            data["metadata"] = {}
+        # Asegurar campos mínimos en metadata
+        data["metadata"].setdefault("created", datetime.now(timezone.utc).isoformat())
+        data["metadata"].setdefault("version", __import__('memoria_cursor').__version__)
+        data["metadata"].setdefault("total_entries", len(data["entries"]))
+        data["metadata"].setdefault("last_updated", datetime.now(timezone.utc).isoformat())
+
         with open(self.entries_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
     
@@ -276,6 +289,16 @@ class MemorySystem:
 
         # Cargar datos existentes
         data = self._load_entries()
+        # Asegurar estructura mínima antes de modificar
+        if not isinstance(data.get("entries"), list):
+            data["entries"] = []
+        if not isinstance(data.get("metadata"), dict):
+            data["metadata"] = {
+                "created": datetime.now(timezone.utc).isoformat(),
+                "version": __import__('memoria_cursor').__version__,
+                "total_entries": 0,
+                "last_updated": datetime.now(timezone.utc).isoformat(),
+            }
         
         # Agregar nueva entrada
         data["entries"].append(entry.to_dict())
@@ -604,7 +627,7 @@ Este proyecto utiliza el sistema de memoria para registrar información relevant
 3. Exportar para LLM: `memoria export`
 
 ## Más Información
-Ver documentación completa en: https://github.com/tu-usuario/memoria-cursor
+Ver documentación completa en: https://github.com/jgjuara/memoria-cursor
 """
         
         docs_file = self.project_root / "MEMORIA.md"

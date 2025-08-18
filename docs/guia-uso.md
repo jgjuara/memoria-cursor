@@ -18,10 +18,10 @@ El Sistema de Memoria es una herramienta diseñada para registrar información r
    pip install memoria-cursor
    
    # Opción 2: Desde git usando uv (más rápido)
-   uv pip install git+https://github.com/tu-usuario/memoria-cursor.git
+   uv pip install git+https://github.com/jgjuara/memoria-cursor.git
    
    # Opción 3: Desde fuente
-   git clone https://github.com/tu-usuario/memoria-cursor.git
+   git clone https://github.com/jgjuara/memoria-cursor.git
    cd memoria-cursor
    pip install -e .
    ```
@@ -71,24 +71,24 @@ memoria create <tipo> "<titulo>" "<contenido>" [opciones]
 **Ejemplos**:
 ```bash
 # Registrar una decisión
-memoria create decision "Elección de base de datos" "Se eligió PostgreSQL por su robustez y soporte JSON nativo" --tags "arquitectura" "base-datos"
+memoria create decision "Elección de base de datos" "Se eligió PostgreSQL por su robustez y soporte JSON nativo" --tags arquitectura --tags base-datos
 
 # Registrar un cambio
-memoria create change "Implementación de autenticación" "Se agregó sistema JWT para autenticación de usuarios" --files "auth.py" "models.py" --tags "autenticacion"
+memoria create change "Implementación de autenticación" "Se agregó sistema JWT para autenticación de usuarios" --files auth.py --files models.py --tags autenticacion
 
 # Registrar contexto
-memoria create context "Configuración del entorno" "El proyecto requiere Python 3.8+ y PostgreSQL 12+" --tags "configuracion"
+memoria create context "Configuración del entorno" "El proyecto requiere Python 3.8+ y PostgreSQL 12+" --tags configuracion
 
 # Registrar entrada relacionada con decisiones anteriores
-memoria create change "Implementación de autenticación" "Se implementó sistema JWT basado en la decisión de arquitectura anterior" --related-entries "550e8400-e29b-41d4-a716-446655440000" "6ba7b810-9dad-11d1-80b4-00c04fd430c8" --tags "implementacion" "autenticacion"
+memoria create change "Implementación de autenticación" "Se implementó sistema JWT basado en la decisión de arquitectura anterior" --related-entries 550e8400-e29b-41d4-a716-446655440000 --related-entries 6ba7b810-9dad-11d1-80b4-00c04fd430c8 --tags implementacion --tags autenticacion
 ```
 
 ### Opciones Adicionales
 
-- `--tags` - Etiquetas para categorizar la entrada
-- `--files` - Archivos afectados por el cambio
+- `--tags` - Etiquetas para categorizar la entrada (repetible)
+- `--files` - Archivos afectados por el cambio (repetible)
 - `--llm-context` - Información específica para agentes LLM
-- `--related-entries` - IDs de entradas relacionadas para contexto y trazabilidad
+- `--related-entries` - IDs de entradas relacionadas para contexto y trazabilidad (repetible)
 
 ### Listar Entradas
 
@@ -106,7 +106,7 @@ memoria list --type decision
 memoria list --search "postgresql"
 
 # Filtrar por etiquetas
-memoria list --tags "arquitectura" "base-datos"
+memoria list --tags arquitectura --tags base-datos
 
 # Ver estadísticas
 memoria list --stats
@@ -149,10 +149,10 @@ El sistema permite referenciar otras entradas para crear un contexto más rico y
 
 ```bash
 # Primera entrada: Decisión de arquitectura
-memoria create decision "Elección de base de datos" "Se eligió PostgreSQL por su robustez ACID" --tags "arquitectura" "base-datos"
+memoria create decision "Elección de base de datos" "Se eligió PostgreSQL por su robustez ACID" --tags arquitectura --tags base-datos
 
 # Segunda entrada: Referenciando la decisión anterior
-memoria create change "Configuración de PostgreSQL" "Se configuró la base de datos según la decisión de arquitectura" --related-entries "550e8400-e29b-41d4-a716-446655440000" --tags "implementacion" "configuracion"
+memoria create change "Configuración de PostgreSQL" "Se configuró la base de datos según la decisión de arquitectura" --related-entries 550e8400-e29b-41d4-a716-446655440000 --tags implementacion --tags configuracion
 ```
 
 ### Beneficios
@@ -348,10 +348,10 @@ memoria list --limit 5
 memoria list --type decision --search "palabra-clave"
 
 # Después de implementar cambios
-memoria create change "Descripción" "Detalles" --files "archivo1.py" "archivo2.py"
+memoria create change "Descripción" "Detalles" --files archivo1.py --files archivo2.py
 
 # Para decisiones importantes
-memoria create decision "Título" "Justificación" --tags "categoria1" "categoria2"
+memoria create decision "Título" "Justificación" --tags categoria1 --tags categoria2
 ```
 
 ## Recursos Adicionales
@@ -360,291 +360,3 @@ memoria create decision "Título" "Justificación" --tags "categoria1" "categori
 - **Documentación del proyecto**: Ver `docs/guia-uso.md`
 - **Ejemplos**: Ver `docs/ejemplos.md`
 - **Esquema JSON**: Ver `memoria_cursor/config/schema.json`
-
-## Soporte
-
-Para reportar problemas o solicitar mejoras:
-- Crear un issue en el repositorio de memoria-cursor
-- Incluir información del sistema y pasos para reproducir
-- Adjuntar archivos de configuración relevantes
-
-## Uso Programático (API Python)
-
-### Importación e Inicialización
-
-Para usar el módulo desde código Python, primero debes importar la clase principal:
-
-```python
-from memoria_cursor import MemorySystem
-```
-
-Luego crear una instancia del sistema y inicializarlo:
-
-```python
-# Crear instancia del sistema
-m = MemorySystem('nombre-proyecto')
-
-# Inicializar el proyecto (REQUERIDO antes de usar cualquier método)
-m.initialize_project()
-```
-
-**Nota importante**: Siempre debes llamar `initialize_project()` antes de usar otros métodos. Este método:
-- Crea la estructura de directorios necesaria
-- Inicializa archivos de configuración
-- Configura la integración con Git si está disponible
-
-### Crear Entradas Programáticamente
-
-El método principal para crear entradas es `create_entry()`. Su firma es:
-
-```python
-def create_entry(
-    self,
-    entry_type: str,           # Tipo de entrada (requerido)
-    title: str,                # Título descriptivo (requerido)
-    content: str,              # Contenido principal (requerido)
-    tags: Optional[List[str]] = None,           # Etiquetas opcionales
-    files_affected: Optional[List[str]] = None, # Archivos afectados opcionales
-    llm_context: Optional[str] = None,          # Contexto para LLM opcional
-    related_entries: Optional[List[str]] = None # Entradas relacionadas opcionales
-) -> str
-```
-
-**Ejemplos de uso**:
-
-```python
-# Crear una nota simple
-entry_id = m.create_entry(
-    'note',
-    'Configuración inicial del proyecto',
-    'Se instaló memoria-cursor y se creó la documentación base del proyecto.',
-    ['configuracion', 'memoria-cursor', 'documentacion']
-)
-
-# Crear una decisión con contexto completo
-decision_id = m.create_entry(
-    'decision',
-    'Elección de base de datos',
-    'Se eligió PostgreSQL por su robustez ACID, soporte JSON nativo y excelente rendimiento.',
-    ['arquitectura', 'base-datos', 'postgresql'],
-    files_affected=['config/database.py', 'models/', 'migrations/'],
-    llm_context='Decisión de arquitectura que afecta toda la capa de persistencia del sistema',
-    related_entries=[entry_id]  # Referenciar entrada anterior
-)
-
-# Crear un cambio con archivos afectados
-change_id = m.create_entry(
-    'change',
-    'Implementación de autenticación JWT',
-    'Se implementó sistema de autenticación basado en JWT tokens.',
-    ['implementacion', 'autenticacion', 'jwt'],
-    files_affected=['auth.py', 'middleware.py', 'models.py'],
-    llm_context='Cambio que afecta la seguridad y autenticación de usuarios'
-)
-```
-
-### Consultar y Filtrar Entradas
-
-#### Listar Entradas
-
-```python
-# Obtener todas las entradas
-all_entries = m.list_entries()
-
-# Filtrar por tipo
-decisions = m.list_entries(entry_type='decision')
-changes = m.list_entries(entry_type='change')
-notes = m.list_entries(entry_type='note')
-
-# Limitar número de resultados
-recent_entries = m.list_entries(limit=10)
-
-# Filtrar por etiquetas
-config_entries = m.list_entries(tags=['configuracion'])
-arch_entries = m.list_entries(tags=['arquitectura'])
-```
-
-#### Búsqueda Avanzada
-
-```python
-# Buscar por texto en título y contenido
-search_results = m.list_entries(search='postgresql')
-
-# Filtrar por rango de fechas
-from datetime import datetime, timedelta
-yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-recent_entries = m.list_entries(date_from=yesterday)
-
-# Combinar filtros
-recent_decisions = m.list_entries(
-    entry_type='decision',
-    limit=5,
-    tags=['arquitectura']
-)
-```
-
-#### Obtener Entrada Específica
-
-```python
-# Obtener entrada por ID
-entry = m.get_entry(entry_id)
-
-if entry:
-    print(f"Título: {entry.title}")
-    print(f"Tipo: {entry.entry_type}")
-    print(f"Contenido: {entry.content}")
-    print(f"Etiquetas: {entry.tags}")
-    print(f"Fecha: {entry.created_at}")
-```
-
-### Exportar para LLM
-
-```python
-# Exportar en formato Markdown (por defecto)
-m.export_entries()
-
-# Exportar en formato JSON
-m.export_entries(format='json')
-
-# Exportar solo entradas de un tipo específico
-decisions = m.list_entries(entry_type='decision')
-# Luego procesar manualmente o usar herramientas de exportación
-```
-
-### Gestión de Entradas
-
-```python
-# Actualizar una entrada existente
-m.update_entry(
-    entry_id,
-    title='Título actualizado',
-    content='Contenido actualizado',
-    tags=['nueva', 'etiqueta']
-)
-
-# Eliminar una entrada
-m.delete_entry(entry_id)
-
-# Obtener estadísticas del sistema
-stats = m.get_statistics()
-print(f"Total de entradas: {stats['total_entries']}")
-print(f"Última actualización: {stats['last_updated']}")
-```
-
-### Manejo de Errores
-
-```python
-try:
-    # Crear entrada
-    entry_id = m.create_entry(
-        'note',
-        'Título de prueba',
-        'Contenido de prueba',
-        ['test']
-    )
-    print(f"Entrada creada con ID: {entry_id}")
-    
-except ValueError as e:
-    print(f"Error de validación: {e}")
-    # Verificar tipos de entrada válidos
-    print("Tipos válidos: decision, change, context, bug, feature, note")
-    
-except Exception as e:
-    print(f"Error inesperado: {e}")
-    # Verificar que el proyecto esté inicializado
-    if not m.project_root.exists():
-        print("El proyecto no está inicializado. Ejecuta initialize_project() primero.")
-```
-
-### Casos de Uso Comunes
-
-#### Para Agentes LLM
-
-```python
-# Antes de implementar cambios, revisar contexto
-recent_context = m.list_entries(
-    entry_type='context',
-    limit=5
-)
-
-# Buscar decisiones relacionadas
-related_decisions = m.list_entries(
-    entry_type='decision',
-    search='base de datos'
-)
-
-# Registrar nueva implementación
-m.create_entry(
-    'change',
-    'Implementación basada en decisiones anteriores',
-    'Se implementó siguiendo las decisiones de arquitectura documentadas.',
-    ['implementacion'],
-    related_entries=[d.entry_id for d in related_decisions]
-)
-```
-
-#### Para Scripts de Automatización
-
-```python
-# Script que registra automáticamente cambios
-def record_deployment(deployment_info):
-    m.create_entry(
-        'change',
-        f'Deployment {deployment_info["version"]}',
-        f'Deployment automático completado. Cambios: {deployment_info["changes"]}',
-        ['deployment', 'automatizacion'],
-        llm_context='Información para debugging y auditoría de deployments'
-    )
-
-# Script que registra métricas
-def record_metrics(metrics_data):
-    m.create_entry(
-        'note',
-        'Métricas de rendimiento',
-        f'CPU: {metrics_data["cpu"]}%, Memoria: {metrics_data["memory"]}%',
-        ['metricas', 'rendimiento'],
-        llm_context='Datos para análisis de tendencias de rendimiento'
-    )
-```
-
-### Mejores Prácticas para Uso Programático
-
-1. **Siempre inicializar**: Llamar `initialize_project()` antes de usar otros métodos
-2. **Manejar errores**: Usar try-catch para manejar errores de validación
-3. **Validar parámetros**: Verificar que los tipos de entrada sean válidos
-4. **Usar etiquetas consistentes**: Mantener un vocabulario de etiquetas coherente
-5. **Proporcionar contexto LLM**: Usar el parámetro `llm_context` para información específica de IA
-6. **Referenciar entradas**: Usar `related_entries` para crear trazabilidad
-7. **Manejar archivos**: Especificar `files_affected` para cambios de código
-
-### Solución de Problemas Comunes
-
-#### Error: "Tipo de entrada inválido"
-```python
-# ❌ INCORRECTO
-m.create_entry('Configuración', 'Título', 'Contenido')
-
-# ✅ CORRECTO
-m.create_entry('note', 'Configuración', 'Título', 'Contenido')
-```
-
-#### Error: "El proyecto no está inicializado"
-```python
-# ❌ INCORRECTO
-m = MemorySystem('proyecto')
-m.create_entry('note', 'Título', 'Contenido')
-
-# ✅ CORRECTO
-m = MemorySystem('proyecto')
-m.initialize_project()  # REQUERIDO
-m.create_entry('note', 'Título', 'Contenido')
-```
-
-#### Error: "Orden de parámetros incorrecto"
-```python
-# ❌ INCORRECTO - orden mal
-m.create_entry('Título', 'Contenido', 'note', ['tags'])
-
-# ✅ CORRECTO - orden correcto
-m.create_entry('note', 'Título', 'Contenido', ['tags'])
-```

@@ -3,6 +3,8 @@ Interfaz de línea de comandos para el sistema de memoria.
 """
 
 import click
+import os
+import traceback
 from pathlib import Path
 from typing import Optional, List
 
@@ -13,7 +15,7 @@ from .tools.export import LLMExporter
 from . import __version__
 
 
-@click.group(context_settings=dict(allow_interspersed_args=True))
+@click.group()
 @click.version_option(version=__version__, prog_name="memoria-cursor")
 @click.option('--project-root', '-p', default='.', 
               help='Ruta raíz del proyecto (por defecto: directorio actual)')
@@ -29,7 +31,7 @@ def main(ctx, project_root):
     ctx.obj['PROJECT_ROOT'] = Path(project_root).resolve()
 
 
-@main.command(context_settings=dict(allow_interspersed_args=True))
+@main.command()
 @click.argument('type')
 @click.argument('title')
 @click.argument('content')
@@ -41,7 +43,7 @@ def main(ctx, project_root):
 @click.pass_context
 def create(ctx, type, title, content, tags, files, llm_context, related_entries, interactive):
     """Crear una nueva entrada en el sistema de memoria."""
-    project_root = ctx.obj['PROJECT_ROOT']
+    project_root = ctx.obj.get('PROJECT_ROOT') if ctx and ctx.obj else Path('.').resolve()
     
     if interactive:
         create_entry_interactive(project_root)
@@ -77,10 +79,12 @@ def create(ctx, type, title, content, tags, files, llm_context, related_entries,
     
     except Exception as e:
         click.echo(f"❌ Error al crear entrada: {e}", err=True)
+        if os.environ.get("MEMORIA_DEBUG"):
+            click.echo(traceback.format_exc(), err=True)
         raise click.Abort()
 
 
-@main.command()
+@main.command(name="list")
 @click.option('--limit', '-n', type=int, help='Número máximo de entradas a mostrar')
 @click.option('--type', '-t', help='Filtrar por tipo de entrada')
 @click.option('--tags', '-g', multiple=True, help='Filtrar por etiquetas')
@@ -91,7 +95,7 @@ def create(ctx, type, title, content, tags, files, llm_context, related_entries,
 @click.option('--stats', is_flag=True, help='Mostrar estadísticas en lugar de entradas')
 @click.option('--interactive', '-i', is_flag=True, help='Modo interactivo')
 @click.pass_context
-def list(ctx, limit, type, tags, search, date_from, date_to, show_git, stats, interactive):
+def list_cmd(ctx, limit, type, tags, search, date_from, date_to, show_git, stats, interactive):
     """Listar entradas del sistema de memoria."""
     project_root = ctx.obj['PROJECT_ROOT']
     
@@ -126,7 +130,7 @@ def list(ctx, limit, type, tags, search, date_from, date_to, show_git, stats, in
 @click.pass_context
 def show(ctx, entry_id, show_git):
     """Mostrar detalles completos de una entrada específica."""
-    project_root = ctx.obj['PROJECT_ROOT']
+    project_root = ctx.obj.get('PROJECT_ROOT') if ctx and ctx.obj else Path('.').resolve()
     
     try:
         memory_system = MemorySystem(project_root)
@@ -199,7 +203,7 @@ def export(ctx, output_format, include_git, group_by, limit, summary, entry_type
 @click.pass_context
 def init(ctx, name, description):
     """Inicializar el sistema de memoria en el proyecto actual."""
-    project_root = ctx.obj['PROJECT_ROOT']
+    project_root = ctx.obj.get('PROJECT_ROOT') if ctx and ctx.obj else Path('.').resolve()
     
     try:
         memory_system = MemorySystem(project_root)
@@ -220,7 +224,7 @@ def init(ctx, name, description):
 @click.pass_context
 def status(ctx):
     """Mostrar estado del sistema de memoria."""
-    project_root = ctx.obj['PROJECT_ROOT']
+    project_root = ctx.obj.get('PROJECT_ROOT') if ctx and ctx.obj else Path('.').resolve()
     
     try:
         memory_system = MemorySystem(project_root)
@@ -273,7 +277,7 @@ def status(ctx):
 @click.pass_context
 def update(ctx, entry_id, title, content, tags, files, llm_context):
     """Actualizar una entrada existente."""
-    project_root = ctx.obj['PROJECT_ROOT']
+    project_root = ctx.obj.get('PROJECT_ROOT') if ctx and ctx.obj else Path('.').resolve()
     
     try:
         memory_system = MemorySystem(project_root)
@@ -315,7 +319,7 @@ def update(ctx, entry_id, title, content, tags, files, llm_context):
 @click.pass_context
 def delete(ctx, entry_id, force):
     """Eliminar una entrada del sistema."""
-    project_root = ctx.obj['PROJECT_ROOT']
+    project_root = ctx.obj.get('PROJECT_ROOT') if ctx and ctx.obj else Path('.').resolve()
     
     try:
         memory_system = MemorySystem(project_root)

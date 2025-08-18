@@ -33,7 +33,10 @@ uv pip install git+https://github.com/jgjuara/memoria-cursor.git
 ### En un Nuevo Proyecto
 
 ```bash
-# 1. Instalar el módulo
+# 1. Instalar el módulo (recomendado en venv)
+python -m venv .venv
+. .venv/bin/activate  # Windows: .venv\Scripts\Activate.ps1
+pip install -U pip
 pip install memoria-cursor
 
 # 2. Inicializar en tu proyecto
@@ -53,7 +56,7 @@ memoria --help
 memoria create decision "Elección de base de datos" "Se eligió PostgreSQL por su robustez" --tags "arquitectura" "base-datos"
 
 # Registrar un cambio
-memoria create change "Implementación de autenticación" "Sistema JWT agregado" --files "auth.py" "models.py"
+memoria create change "Implementación de autenticación" "Sistema JWT agregado" --files auth.py --files models.py
 
 # Registrar contexto
 memoria create context "Configuración del entorno" "Python 3.8+, PostgreSQL 12+" --tags "configuracion"
