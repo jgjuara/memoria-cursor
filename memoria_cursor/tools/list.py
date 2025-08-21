@@ -13,6 +13,7 @@ from ..core.entry import Entry
 
 def list_entries(project_root: str = ".",
                 limit: Optional[int] = None,
+                offset: int = 0,
                 entry_type: Optional[str] = None,
                 tags: Optional[List[str]] = None,
                 search: Optional[str] = None,
@@ -26,6 +27,7 @@ def list_entries(project_root: str = ".",
     Args:
         project_root: Ruta raíz del proyecto
         limit: Número máximo de entradas a retornar
+        offset: Número de entradas a omitir desde el inicio (para paginación)
         entry_type: Filtrar por tipo de entrada
         tags: Filtrar por etiquetas
         search: Buscar en título y contenido
@@ -46,6 +48,7 @@ def list_entries(project_root: str = ".",
     # Obtener entradas filtradas
     entries = memory_system.list_entries(
         limit=limit,
+        offset=offset,
         entry_type=entry_type,
         tags=tags,
         search=search,
@@ -58,7 +61,8 @@ def list_entries(project_root: str = ".",
 
 def display_entries(entries: List[Entry], 
                    show_git: bool = False,
-                   limit: Optional[int] = None) -> None:
+                   limit: Optional[int] = None,
+                   offset: int = 0) -> None:
     """
     Mostrar entradas en formato de lista usando print para evitar problemas de consola.
     
@@ -66,6 +70,7 @@ def display_entries(entries: List[Entry],
         entries: Lista de entradas a mostrar
         show_git: Mostrar información de Git
         limit: Número máximo de entradas a mostrar
+        offset: Número de entradas omitidas desde el inicio
     """
     if not entries:
         console = Console()
@@ -79,6 +84,14 @@ def display_entries(entries: List[Entry],
     # Mostrar título
     print("\n📚 Entradas de Memoria")
     print("=" * 50)
+    
+    # Mostrar información de paginación si hay offset
+    if offset > 0:
+        print(f"📍 Mostrando desde la entrada #{offset + 1}")
+    if limit:
+        print(f"📄 Mostrando máximo {limit} entradas")
+    if offset > 0 or limit:
+        print()
     
     # Mostrar cada entrada en formato de lista
     for i, entry in enumerate(entries):

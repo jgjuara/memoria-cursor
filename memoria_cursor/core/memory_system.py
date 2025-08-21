@@ -331,6 +331,7 @@ class MemorySystem:
     
     def list_entries(self,
                     limit: Optional[int] = None,
+                    offset: int = 0,
                     entry_type: Optional[str] = None,
                     tags: Optional[List[str]] = None,
                     search: Optional[str] = None,
@@ -341,6 +342,7 @@ class MemorySystem:
         
         Args:
             limit: Número máximo de entradas a retornar
+            offset: Número de entradas a omitir desde el inicio (para paginación)
             entry_type: Filtrar por tipo de entrada
             tags: Filtrar por etiquetas
             search: Buscar en título y contenido
@@ -384,9 +386,12 @@ class MemorySystem:
         if date_from or date_to:
             filtered_entries = self._filter_by_date(filtered_entries, date_from, date_to)
         
-        # Aplicar límite
+        # Aplicar offset y límite
+        if offset > 0:
+            filtered_entries = filtered_entries[offset:]
+        
         if limit:
-            filtered_entries = filtered_entries[-limit:]
+            filtered_entries = filtered_entries[:limit]
         
         return filtered_entries
     

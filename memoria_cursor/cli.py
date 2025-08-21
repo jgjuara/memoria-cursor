@@ -86,6 +86,7 @@ def create(ctx, type, title, content, tags, files, llm_context, related_entries,
 
 @main.command(name="list")
 @click.option('--limit', '-n', type=int, help='Número máximo de entradas a mostrar')
+@click.option('--offset', '-o', type=int, default=0, help='Número de entradas a omitir desde el inicio (para paginación)')
 @click.option('--type', '-t', help='Filtrar por tipo de entrada')
 @click.option('--tags', '-g', multiple=True, help='Filtrar por etiquetas')
 @click.option('--search', '-s', help='Buscar en título y contenido')
@@ -95,7 +96,7 @@ def create(ctx, type, title, content, tags, files, llm_context, related_entries,
 @click.option('--stats', is_flag=True, help='Mostrar estadísticas en lugar de entradas')
 @click.option('--interactive', '-i', is_flag=True, help='Modo interactivo')
 @click.pass_context
-def list_cmd(ctx, limit, type, tags, search, date_from, date_to, show_git, stats, interactive):
+def list_cmd(ctx, limit, offset, type, tags, search, date_from, date_to, show_git, stats, interactive):
     """Listar entradas del sistema de memoria."""
     project_root = ctx.obj['PROJECT_ROOT']
     
@@ -107,6 +108,7 @@ def list_cmd(ctx, limit, type, tags, search, date_from, date_to, show_git, stats
         entries = list_entries(
             project_root=project_root,
             limit=limit,
+            offset=offset,
             entry_type=type,
             tags=list(tags),
             search=search,
@@ -117,7 +119,7 @@ def list_cmd(ctx, limit, type, tags, search, date_from, date_to, show_git, stats
         )
         
         if not stats:
-            display_entries(entries, show_git=show_git, limit=limit)
+            display_entries(entries, show_git=show_git, limit=limit, offset=offset)
     
     except Exception as e:
         click.echo(f"❌ Error al listar entradas: {e}", err=True)

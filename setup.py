@@ -8,7 +8,7 @@ def read_readme():
 
 setup(
     name="memoria-cursor",
-    version="1.0.4",
+    version="1.0.5",
     description="Sistema de memoria para agentes LLM - Herramienta para registrar información relevante del desarrollo de proyectos",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
