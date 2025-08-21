@@ -133,6 +133,14 @@ def display_entries(entries: List[Entry],
             related_str = ", ".join(entry.related_entries)
             print(f"Relacionadas: {related_str}")
         
+        # Contenido truncado para vista previa
+        if entry.content:
+            # Truncar contenido a ~120 caracteres para mantener formato limpio
+            content_preview = entry.content.strip()
+            if len(content_preview) > 120:
+                content_preview = content_preview[:117] + "..."
+            print(f"Contenido: {content_preview}")
+        
         # Información de Git si se solicita
         if show_git and entry.git_info:
             git_info = entry.git_info
