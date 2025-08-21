@@ -13,7 +13,7 @@ Características principales:
 - Fácil integración en cualquier proyecto
 """
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 __author__ = "Tu Nombre"
 __email__ = "tu@email.com"
 

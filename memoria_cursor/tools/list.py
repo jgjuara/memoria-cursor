@@ -4,9 +4,7 @@ Herramienta para listar y buscar entradas en el sistema de memoria.
 
 from typing import List, Optional
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
-from rich.text import Text
 from datetime import datetime
 
 from ..core.memory_system import MemorySystem
@@ -62,7 +60,7 @@ def display_entries(entries: List[Entry],
                    show_git: bool = False,
                    limit: Optional[int] = None) -> None:
     """
-    Mostrar entradas en formato tabular usando Rich.
+    Mostrar entradas en formato de lista usando print para evitar problemas de consola.
     
     Args:
         entries: Lista de entradas a mostrar
@@ -78,62 +76,60 @@ def display_entries(entries: List[Entry],
     if limit:
         entries = entries[-limit:]
     
-    console = Console()
+    # Mostrar título
+    print("\n📚 Entradas de Memoria")
+    print("=" * 50)
     
-    # Crear tabla
-    table = Table(title="📚 Entradas de Memoria", show_header=True, header_style="bold magenta")
-    
-    # Columnas básicas
-    table.add_column("ID", style="dim", width=12)
-    table.add_column("Tipo", style="cyan", width=10)
-    table.add_column("Título", style="bold", width=40)
-    table.add_column("Fecha", style="green", width=20)
-    table.add_column("Etiquetas", style="yellow", width=20)
-    
-    # Columna de Git si se solicita
-    if show_git:
-        table.add_column("Git", style="blue", width=15)
-    
-    # Agregar filas
-    for entry in entries:
-        # Formatear fecha
+    # Mostrar cada entrada en formato de lista
+    for i, entry in enumerate(entries):
+        # Separador entre entradas
+        if i > 0:
+            print("\n" + "─" * 50)
+        
+        # ID completo
+        print(f"ID: {entry.entry_id}")
+        
+        # Tipo
+        print(f"Tipo: {entry.entry_type.upper()}")
+        
+        # Título completo
+        print(f"Título: {entry.title}")
+        
+        # Fecha
         try:
             dt = datetime.fromisoformat(entry.timestamp)
             formatted_date = dt.strftime("%Y-%m-%d %H:%M")
         except ValueError:
             formatted_date = entry.timestamp[:16] if entry.timestamp else "N/A"
+        print(f"Fecha: {formatted_date}")
         
-        # Formatear etiquetas
-        tags_str = ", ".join(entry.tags[:3])  # Mostrar solo las primeras 3
-        if len(entry.tags) > 3:
-            tags_str += f" (+{len(entry.tags) - 3})"
+        # Etiquetas
+        if entry.tags:
+            tags_str = ", ".join(entry.tags)
+            print(f"Etiquetas: {tags_str}")
+        else:
+            print("Etiquetas: Ninguna")
         
-        # Información de Git
-        git_info = ""
+        # Archivos afectados
+        if entry.files_affected:
+            files_str = ", ".join(entry.files_affected)
+            print(f"Archivos: {files_str}")
+        
+        # Entradas relacionadas
+        if entry.related_entries:
+            related_str = ", ".join(entry.related_entries)
+            print(f"Relacionadas: {related_str}")
+        
+        # Información de Git si se solicita
         if show_git and entry.git_info:
-            commit = entry.git_info.get('current_commit', 'N/A')
-            branch = entry.git_info.get('branch', 'N/A')
-            git_info = f"{commit} ({branch})"
-        
-        # Crear fila
-        row = [
-            entry.entry_id or "N/A",
-            entry.entry_type.upper(),
-            entry.title[:37] + "..." if len(entry.title) > 40 else entry.title,
-            formatted_date,
-            tags_str
-        ]
-        
-        if show_git:
-            row.append(git_info)
-        
-        table.add_row(*row)
-    
-    # Mostrar tabla
-    console.print(table)
+            git_info = entry.git_info
+            print(f"Git Commit: {git_info.get('current_commit', 'N/A')}")
+            print(f"Git Rama: {git_info.get('branch', 'N/A')}")
+            if git_info.get('commit_message'):
+                print(f"Git Mensaje: {git_info.get('commit_message', 'N/A')}")
     
     # Mostrar resumen
-    console.print(f"\n📊 Total de entradas mostradas: {len(entries)}")
+    print(f"\n📊 Total de entradas mostradas: {len(entries)}")
 
 
 def display_entry_details(entry: Entry, show_git: bool = False) -> None:
@@ -191,41 +187,40 @@ def _get_statistics(memory_system: MemorySystem) -> List[Entry]:
     
     console = Console()
     
-    # Crear tabla de estadísticas
-    table = Table(title="📊 Estadísticas del Sistema de Memoria", show_header=True, header_style="bold magenta")
-    table.add_column("Métrica", style="bold", width=20)
-    table.add_column("Valor", style="cyan", width=15)
+    # Mostrar título
+    console.print("\n📊 Estadísticas del Sistema de Memoria", style="bold magenta")
+    console.print("=" * 50)
     
     # Estadísticas básicas
-    table.add_row("Total de entradas", str(stats.get("total_entries", 0)))
-    table.add_row("Fecha de creación", stats.get("created", "N/A")[:10] if stats.get("created") else "N/A")
-    table.add_row("Última actualización", stats.get("last_updated", "N/A")[:10] if stats.get("last_updated") else "N/A")
+    console.print(f"Total de entradas: {stats.get('total_entries', 0)}", style="bold")
+    created = stats.get("created", "N/A")
+    if created != "N/A":
+        created = created[:10]
+    console.print(f"Fecha de creación: {created}")
+    
+    last_updated = stats.get("last_updated", "N/A")
+    if last_updated != "N/A":
+        last_updated = last_updated[:10]
+    console.print(f"Última actualización: {last_updated}")
     
     # Estadísticas por tipo
     by_type = stats.get("by_type", {})
     if by_type:
-        table.add_row("", "")  # Línea separadora
-        table.add_row("[bold]Por tipo:[/bold]", "")
-        
+        console.print("\n[bold]Distribución por tipo:[/bold]")
         for entry_type, count in sorted(by_type.items()):
-            table.add_row(f"  {entry_type}", str(count))
+            console.print(f"  {entry_type}: {count}")
     
     # Total de etiquetas únicas
     total_tags = stats.get("total_tags", [])
-    table.add_row("", "")  # Línea separadora
-    table.add_row("Etiquetas únicas", str(len(total_tags)))
+    console.print(f"\nEtiquetas únicas: {len(total_tags)}")
     
     if total_tags:
-        table.add_row("", "")  # Línea separadora
-        table.add_row("[bold]Lista de etiquetas:[/bold]", "")
-        
+        console.print("[bold]Lista de etiquetas:[/bold]")
         # Agrupar etiquetas por líneas
         tags_per_line = 5
         for i in range(0, len(total_tags), tags_per_line):
             line_tags = total_tags[i:i + tags_per_line]
-            table.add_row("", ", ".join(line_tags))
-    
-    console.print(table)
+            console.print(f"  {', '.join(line_tags)}")
     
     # Mostrar gráfico de barras simple para tipos
     if by_type:
